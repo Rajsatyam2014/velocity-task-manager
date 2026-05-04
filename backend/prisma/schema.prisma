@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int            @id @default(autoincrement())
+  name              String
+  email             String         @unique
+  password          String
+  role              String         @default("MEMBER") // ADMIN or MEMBER
+  bio               String?
+  projects          Project[]      @relation("ProjectCreator")
+  tasks             Task[]
+  sentMessages      Message[]      @relation("SentMessages")
+  receivedMessages  Message[]      @relation("ReceivedMessages")
+  notifications     Notification[]
+  createdAt         DateTime       @default(now())
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  createdById Int
+  createdBy   User     @relation("ProjectCreator", fields: [createdById], references: [id])
+  tasks       Task[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Task {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  status      String    @default("TODO") // TODO, IN_PROGRESS, TESTING, DONE
+  priority    String    @default("LOW")  // LOW, MEDIUM, HIGH
+  dueDate     DateTime?
+  projectId   Int
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo  Int?
+  user        User?     @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  content    String
+  senderId   Int
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId Int
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  type      String   // MESSAGE, TASK_ASSIGNED, TASK_OVERDUE, INVITE, SYSTEM
+  content   String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  read      Boolean  @default(false)
+  link      String?  // Optional deep-link path e.g. /messages, /kanban/3
+  createdAt DateTime @default(now())
+}
